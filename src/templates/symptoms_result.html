@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symptom Check Results</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .result-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .explanation-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .risk-indicator {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .probability-badge {
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+        }
+        .visualization-container {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            background: white;
+            margin-bottom: 1.5rem;
+        }
+        .visualization-title {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="result-card card">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0"><i class="bi bi-clipboard2-pulse"></i> Symptom Check Results</h2>
+                    <a href="/symptoms" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-arrow-repeat"></i> Check Again
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Risk Assessment -->
+                {% if prediction == 1 %}
+                <div class="alert alert-danger d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle-fill me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h4 class="alert-heading">High Risk of Diabetes</h4>
+                        <div class="d-flex align-items-center mt-2">
+                            <span class="risk-indicator me-2">Risk Probability:</span>
+                            <span class="badge bg-dark probability-badge">{{ probability }}</span>
+                        </div>
+                        <p class="mb-0 mt-2">Please consult a healthcare professional for further evaluation.</p>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-success d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h4 class="alert-heading">Low Risk of Diabetes</h4>
+                        <div class="d-flex align-items-center mt-2">
+                            <span class="risk-indicator me-2">Risk Probability:</span>
+                            <span class="badge bg-dark probability-badge">{{ probability }}</span>
+                        </div>
+                        <p class="mb-0 mt-2">Continue maintaining healthy habits and regular check-ups.</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Explanations Section -->
+                <div class="explanation-section">
+                    <h3 class="mb-4"><i class="bi bi-lightbulb"></i> How We Determined This Result</h3>
+                    
+                    <div class="row">
+                        <!-- Feature Importance -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="visualization-container">
+                                <h4 class="visualization-title">
+                                    <i class="bi bi-bar-chart"></i> Feature Importance
+                                </h4>
+                                {% if explanation.importance %}
+                                    <div id="importance-plot">{{ explanation.importance|safe }}</div>
+                                {% else %}
+                                    <div class="alert alert-warning">Feature importance visualization not available</div>
+                                {% endif %}
+                                <p class="text-muted mt-2">Shows which symptoms contributed most to your result</p>
+                            </div>
+                        </div>
+                        
+                        <!-- SHAP Explanation -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="visualization-container">
+                                <h4 class="visualization-title">
+                                    <i class="bi bi-graph-up"></i> SHAP Explanation
+                                </h4>
+                                {% if explanation.shap %}
+                                    <img src="{{ url_for('static', filename=explanation.shap.split('/')[-1]) }}" 
+                                         class="img-fluid rounded" 
+                                         alt="SHAP explanation plot">
+                                {% else %}
+                                    <div class="alert alert-warning">SHAP explanation not available</div>
+                                {% endif %}
+                                <p class="text-muted mt-2">Shows how each symptom affected your specific result</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- LIME Explanation -->
+                    <div class="visualization-container">
+                        <h4 class="visualization-title">
+                            <i class="bi bi-zoom-in"></i> Detailed Explanation
+                        </h4>
+                        {% if explanation.lime %}
+                            <div id="lime-explanation">{{ explanation.lime|safe }}</div>
+                        {% else %}
+                            <div class="alert alert-warning">Detailed explanation not available</div>
+                        {% endif %}
+                        <p class="text-muted mt-2">Breakdown of how each symptom contributed to your specific result</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="/symptoms" class="btn btn-primary">
+                        <i class="bi bi-arrow-repeat"></i> Check Another Case
+                    </a>
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="bi bi-house"></i> Return Home
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Footer with Disclaimer -->
+            <div class="card-footer bg-light">
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle"></i> <strong>Disclaimer:</strong> This assessment is not a substitute for professional medical advice. 
+                    Always consult with a qualified healthcare provider for diagnosis and treatment.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Resize Plotly charts on load -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Resize Plotly charts to fit containers
+            if (typeof Plotly !== 'undefined') {
+                const plots = document.querySelectorAll('.js-plotly-plot');
+                plots.forEach(plot => {
+                    Plotly.Plots.resize(plot);
+                });
+            }
+            
+            // Make LIME explanation responsive
+            const limeContainer = document.getElementById('lime-explanation');
+            if (limeContainer) {
+                const iframe = limeContainer.querySelector('iframe');
+                if (iframe) {
+                    iframe.style.width = '100%';
+                    iframe.style.height = '500px';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
